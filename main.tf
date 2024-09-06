@@ -199,7 +199,7 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss_uniform" {
       force_update_tag           = lookup(extension.value, "force_update_tag", null)
       protected_settings         = lookup(extension.value, "protected_settings", null)
       dynamic "protected_settings_from_key_vault" {
-        for_each = data_disk.value.protected_settings_from_key_vault != null ? [data_disk.value.protected_settings_from_key_vault] : []
+        for_each = extension.value.protected_settings_from_key_vault != null ? [extension.value.protected_settings_from_key_vault] : []
         content {
           secret_url      = protected_settings_from_key_vault.value.secret_url
           source_vault_id = protected_settings_from_key_vault.value.source_vault_id

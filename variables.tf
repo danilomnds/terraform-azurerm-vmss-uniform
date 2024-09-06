@@ -348,7 +348,7 @@ variable "termination_notification" {
 
 variable "upgrade_mode" {
   type    = string
-  default = "manual"
+  default = "Manual"
 }
 
 variable "user_data" {

@@ -5,21 +5,26 @@
 
 Module developed to standardize the linux virtual machine scale set creation.
 
+For the network_interface block I used the smart solution created by [https://github.com/andreaskhvid](https://github.com/andreaskhvid)
+
 ## Compatibility Matrix
 
 | Module Version | Terraform Version | AzureRM Version |
 |----------------|-------------------| --------------- |
-| v1.0.0         | v1.9.5            | 4.0.0          |
+| v1.0.0         | v1.9.5            | 4.0.0           |
+
+## Specifying a version 
+To avoid that your code get updates automatically, is mandatory to set the version using the source option. By defining the ?ref=*** in the the URL, you can define the version of the module.
+Note: The ?ref=*** refers a tag on the git module repo.
 
 ## Use case
 
 ```hcl
-module "vmss-prd-devops-002" {
-  #source                         = "https://github.com/danilomnds/terraform-azurerm-vmss-uniform?ref=v1.0.0"
-  source                          = "git::https://github.com/danilomnds/terraform-azurerm-vmss-uniform"
-  name                            = "vmss-prd-devops-002"
-  location                        = "brazilsouth"
-  resource_group_name             = "rg-br-shared-devops"
+module "vmss-<env>-<system>-<id>" {
+  source                         = "https://github.com/danilomnds/terraform-azurerm-vmss-uniform?ref=v1.0.0"  
+  name                            = "vmss-<env>-<system>-<id>"
+  location                        = "<azure region>"
+  resource_group_name             = "<resource group>"
   disable_password_authentication = false
   admin_username                  = var.LINUX_USERNAME
   admin_password                  = var.LINUX_PASSWORD
@@ -36,7 +41,7 @@ module "vmss-prd-devops-002" {
     }]
   }]
   os_disk = {
-    caching              = "none"
+    caching              = "None"
     storage_account_type = "Premium_LRS"
     disk_size_gb         = 64
   }
@@ -65,10 +70,10 @@ module "vmss-prd-devops-002" {
   }
 }
 output "name" {
-  value = module.vmss-prd-devops-002.name
+  value = module.vmss-<env>-<system>-<id>.name
 }
 output "id" {
-  value = module.vmss-prd-devops-002.id
+  value = module.vmss-<env>-<system>-<id>.id
 }
 ```
 
@@ -123,7 +128,7 @@ output "id" {
 | spot_restore | A spot_restore block as defined in the [documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_virtual_machine_scale_set) | `object({})` | n/a | No |
 | tags | tags for the resource | `map(string)` | `{}` | No |
 | termination_notification | A termination_notification block as defined in the [documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_virtual_machine_scale_set) | `object({})` | n/a | No |
-| upgrade_mode | Specifies how Upgrades (e.g. changing the Image/SKU) should be performed to Virtual Machine Instances | `string` | `manual` | No |
+| upgrade_mode | Specifies how Upgrades (e.g. changing the Image/SKU) should be performed to Virtual Machine Instances | `string` | `Manual` | No |
 | user_data | The Base64-Encoded User Data which should be used for this Virtual Machine Scale Set | `string` | `manual` | No |
 | vtpm_enabled | Specifies whether vTPM should be enabled on the virtual machine | `bool` | n/a | No |
 | zone_balance | Should the Virtual Machines in this Scale Set be strictly evenly distributed across Availability Zones | `bool` | `false` | No |
