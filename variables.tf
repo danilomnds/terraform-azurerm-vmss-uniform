@@ -25,7 +25,9 @@ variable "sku" {
 
 variable "network_interface" {
   type = list(object({
-    name = string
+    name           = string
+    auxiliary_mode = optional(string)
+    auxiliary_sku  = optional(string)
     ip_configuration = list(object({
       name                                         = string
       application_gateway_backend_address_pool_ids = optional(list(string))
@@ -37,22 +39,27 @@ variable "network_interface" {
         name                    = string
         domain_name_label       = optional(string)
         idle_timeout_in_minutes = optional(number)
-        ip_tag = optional(object({
+        ip_tag = optional(list(object({
           tag  = string
           type = string
-        }))
+        })), [])
         public_ip_prefix_id = optional(string)
         version             = optional(string)
       }))
       subnet_id = optional(string)
       version   = optional(string)
     }))
-    dns_servers                   = optional(list(string))
-    enable_accelerated_networking = optional(bool)
-    enable_ip_forwarding          = optional(bool)
-    network_security_group_id     = optional(string)
-    primary                       = optional(bool)
+    dns_servers                    = optional(list(string))
+    accelerated_networking_enabled = optional(bool)
+    ip_forwarding_enabled          = optional(bool)
+    network_security_group_id      = optional(string)
+    primary                        = optional(bool)
   }))
+
+  validation {
+    condition     = length(var.network_interface) > 0 && alltrue([for nic in var.network_interface : length(nic.ip_configuration) > 0])
+    error_message = "At least one network interface with at least one IP configuration must be provided."
+  }
 }
 
 variable "os_disk" {
@@ -64,6 +71,7 @@ variable "os_disk" {
       placement = optional(string)
     }))
     disk_size_gb                     = optional(number)
+    disk_encryption_set_id           = optional(string)
     secure_vm_disk_encryption_set_id = optional(string)
     security_encryption_type         = optional(string)
     write_accelerator_enabled        = optional(bool)
@@ -72,7 +80,7 @@ variable "os_disk" {
 
 variable "additional_capabilities" {
   type = object({
-    ultra_ssd_enabled = bool
+    ultra_ssd_enabled = optional(bool, false)
   })
   default = null
 }
@@ -93,16 +101,19 @@ variable "admin_ssh_key" {
 
 variable "automatic_os_upgrade_policy" {
   type = object({
-    disable_automatic_rollback  = bool
-    enable_automatic_os_upgrade = bool
+    automatic_rollback_enabled   = bool
+    automatic_os_upgrade_enabled = bool
   })
-  default = null
+  default = {
+    automatic_rollback_enabled   = true
+    automatic_os_upgrade_enabled = false
+  }
 }
 
 variable "automatic_instance_repair" {
   type = object({
     enabled      = bool
-    grace_period = optional(number)
+    grace_period = optional(string)
     action       = optional(string)
   })
   default = null
@@ -110,7 +121,7 @@ variable "automatic_instance_repair" {
 
 variable "boot_diagnostics" {
   type = object({
-    storage_account_uri = string
+    storage_account_uri = optional(string)
   })
   default = null
 }
@@ -132,16 +143,16 @@ variable "custom_data" {
 
 variable "data_disk" {
   type = list(object({
-    name                           = optional(string)
-    caching                        = string
-    create_option                  = optional(string)
-    disk_size_gb                   = optional(number)
-    lun                            = number
-    storage_account_type           = string
-    disk_encryption_set_id         = optional(string)
-    ultra_ssd_disk_iops_read_write = optional(string)
-    ultra_ssd_disk_mbps_read_write = optional(string)
-    write_accelerator_enabled      = optional(bool)
+    name                      = optional(string)
+    caching                   = string
+    create_option             = optional(string)
+    disk_size_gb              = number
+    lun                       = number
+    storage_account_type      = string
+    disk_encryption_set_id    = optional(string)
+    disk_iops_read_write      = optional(number)
+    disk_mbps_read_write      = optional(number)
+    write_accelerator_enabled = optional(bool)
   }))
   default = null
 }
@@ -171,7 +182,7 @@ variable "extension" {
     name                       = string
     publisher                  = string
     type                       = string
-    type_handler_version       = optional(string)
+    type_handler_version       = string
     auto_upgrade_minor_version = optional(bool)
     automatic_upgrade_enabled  = optional(bool)
     force_update_tag           = optional(string)
@@ -205,8 +216,8 @@ variable "gallery_application" {
   type = list(object({
     version_id             = string
     configuration_blob_uri = optional(string)
-    order                  = optional(string)
-    tag                    = map(string)
+    order                  = optional(number)
+    tag                    = optional(string)
   }))
   default = null
 }
@@ -222,7 +233,7 @@ variable "host_group_id" {
 }
 
 variable "identity" {
-  description = "Specifies the type of Managed Service Identity that should be configured on this Container Registry"
+  description = "Specifies the type of Managed Service Identity that should be configured on this Linux Virtual Machine Scale Set."
   type = object({
     type         = string
     identity_ids = optional(list(string))
@@ -250,7 +261,7 @@ variable "plan" {
 }
 
 variable "platform_fault_domain_count" {
-  type    = string
+  type    = number
   default = null
 }
 
@@ -272,9 +283,9 @@ variable "proximity_placement_group_id" {
 variable "rolling_upgrade_policy" {
   type = object({
     cross_zone_upgrades_enabled             = optional(bool)
-    max_batch_instance_percent              = string
-    max_unhealthy_instance_percent          = string
-    max_unhealthy_upgraded_instance_percent = string
+    max_batch_instance_percent              = number
+    max_unhealthy_instance_percent          = number
+    max_unhealthy_upgraded_instance_percent = number
     pause_time_between_batches              = string
     prioritize_unhealthy_instances_enabled  = optional(bool)
     maximum_surge_instances_enabled         = optional(bool)
@@ -292,7 +303,7 @@ variable "scale_in" {
 
 variable "secret" {
   type = list(object({
-    certificate = optional(object({
+    certificate = list(object({
       url = string
     }))
     key_vault_id = string
@@ -328,7 +339,7 @@ variable "source_image_reference" {
 variable "spot_restore" {
   type = object({
     enabled = optional(bool)
-    timeout = optional(number)
+    timeout = optional(string)
   })
   default = null
 }
@@ -340,8 +351,8 @@ variable "tags" {
 
 variable "termination_notification" {
   type = object({
-    enabled = optional(bool)
-    timeout = optional(number)
+    enabled = bool
+    timeout = optional(string)
   })
   default = null
 }
@@ -357,7 +368,30 @@ variable "user_data" {
 }
 
 variable "vtpm_enabled" {
-  type    = string
+  type    = bool
+  default = null
+}
+
+variable "resilient_vm_creation_enabled" {
+  description = "Specifies whether resilient VM creation is enabled."
+  type        = bool
+  default     = false
+}
+
+variable "resilient_vm_deletion_enabled" {
+  description = "Specifies whether resilient VM deletion is enabled."
+  type        = bool
+  default     = false
+}
+
+variable "timeouts" {
+  description = "Optional operation timeouts for creating, reading, updating, and deleting the VM Scale Set."
+  type = object({
+    create = optional(string)
+    read   = optional(string)
+    update = optional(string)
+    delete = optional(string)
+  })
   default = null
 }
 

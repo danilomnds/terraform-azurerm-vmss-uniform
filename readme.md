@@ -11,6 +11,7 @@ For the network_interface block I used the smart solution created by [https://gi
 
 | Module Version | Terraform Version | AzureRM Version |
 |----------------|-------------------| --------------- |
+| v5.6.0         | >= 1.16.4         | >= 5.6.0       |
 | v1.0.0         | v1.9.5            | 4.0.0           |
 
 ## Specifying a version 
@@ -21,7 +22,7 @@ Note: The ?ref=*** refers a tag on the git module repo.
 
 ```hcl
 module "vmss-<env>-<system>-<id>" {
-  source                         = "https://github.com/danilomnds/terraform-azurerm-vmss-uniform?ref=v1.0.0"  
+  source                          = "git::https://github.com/danilomnds/terraform-azurerm-vmss-uniform.git?ref=v5.6.0"
   name                            = "vmss-<env>-<system>-<id>"
   location                        = "<azure region>"
   resource_group_name             = "<resource group>"
@@ -37,7 +38,7 @@ module "vmss-<env>-<system>-<id>" {
     ip_configuration = [{
       name      = "internal"
       primary   = true
-      subnet_id = ""
+      subnet_id = "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.Network/virtualNetworks/<vnet>/subnets/<subnet>"
     }]
   }]
   os_disk = {
@@ -81,9 +82,9 @@ output "id" {
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| name | eventhub namespace name | `string` | n/a | `Yes` |
+| name | Linux Virtual Machine Scale Set name | `string` | n/a | `Yes` |
 | location | azure region | `string` | n/a | `Yes` |
-| resource_group_name | resource group where the ACR will be placed | `string` | n/a | `Yes` |
+| resource_group_name | Resource group where the Linux Virtual Machine Scale Set will be created | `string` | n/a | `Yes` |
 | admin_username | The username of the local administrator on each Virtual Machine Scale Set instance | `string` | n/a | `Yes` |
 | instances | The number of Virtual Machines in the Scale Set | `number` | `0` | No |
 | sku | The Virtual Machine SKU for the Scale Set, such as Standard_F2 | `string` | n/a | `Yes` |
@@ -92,7 +93,7 @@ output "id" {
 | additional_capabilities | An additional_capabilities block as defined in the [documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_virtual_machine_scale_set) | `object({})` | n/a | No |
 | admin_password | The Password which should be used for the local-administrator on this Virtual Machine | `string` | n/a | No |
 | admin_ssh_key | One or more admin_ssh_key blocks as defined in the [documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_virtual_machine_scale_set) | `list(object({}))` | n/a | No |
-| automatic_os_upgrade_policy | An automatic_os_upgrade_policy block as defined in the [documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_virtual_machine_scale_set) | `object({})` | n/a | No |
+| automatic_os_upgrade_policy | Automatic OS upgrade policy with `automatic_rollback_enabled` and `automatic_os_upgrade_enabled` | `object({})` | `{ automatic_rollback_enabled = true, automatic_os_upgrade_enabled = false }` | No |
 | automatic_instance_repair | An automatic_instance_repair block as defined in the [documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_virtual_machine_scale_set) | `object({})` | n/a | No |
 | boot_diagnostics | A boot_diagnostics block as defined in the [documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_virtual_machine_scale_set) | `object({})` | n/a | No |
 | capacity_reservation_group_id |  Specifies the ID of the Capacity Reservation Group which the Virtual Machine Scale Set should be allocated to | `string` | n/a | No |
@@ -111,13 +112,15 @@ output "id" {
 | health_probe_id | The ID of a Load Balancer Probe which should be used to determine the health of an instance | `string` | n/a | No |
 | host_group_id | Specifies the ID of the dedicated host group that the virtual machine scale set resides in | `string` | n/a | No |
 | identity | block as defined in the [documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_virtual_machine_scale_set) | `object({})` | n/a | No |
-| max_bid_price | The maximum price you're willing to pay for each Virtual Machine in this Scale Set, in US Dollars; which must be greater than the current spot price | `string` | n/a | No |
+| max_bid_price | The maximum price you're willing to pay for each Virtual Machine in this Scale Set, in US Dollars; which must be greater than the current spot price | `number` | n/a | No |
 | overprovision | Should Azure over-provision Virtual Machines in this Scale Set | `bool` | `true` | No |
 | plan | A plan block as defined in the [documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_virtual_machine_scale_set) | `object({})` | n/a | No |
 | platform_fault_domain_count | Specifies the number of fault domains that are used by this Linux Virtual Machine Scale Set | `number` | n/a | No |
 | priority | The Priority of this Virtual Machine Scale Set. Possible values are Regular and Spot | `string` | `Regular` | No |
 | provision_vm_agent | Should the Azure VM Agent be provisioned on each Virtual Machine in the Scale Set | `bool` | `true` | No |
 | proximity_placement_group_id | The ID of the Proximity Placement Group in which the Virtual Machine Scale Set should be assigned to | `string` | n/a | No |
+| resilient_vm_creation_enabled | Enables resilient VM creation | `bool` | `false` | No |
+| resilient_vm_deletion_enabled | Enables resilient VM deletion | `bool` | `false` | No |
 | rolling_upgrade_policy | A rolling_upgrade_policy block as defined in the [documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_virtual_machine_scale_set) | `object({})` | n/a | No |
 | scale_in | A scale_in block as defined in the [documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_virtual_machine_scale_set) | `object({})` | n/a | No |
 | secret | One or more secret blocks as defined in the [documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_virtual_machine_scale_set) | `list(object({}))` | n/a | No |
@@ -129,8 +132,9 @@ output "id" {
 | tags | tags for the resource | `map(string)` | `{}` | No |
 | termination_notification | A termination_notification block as defined in the [documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_virtual_machine_scale_set) | `object({})` | n/a | No |
 | upgrade_mode | Specifies how Upgrades (e.g. changing the Image/SKU) should be performed to Virtual Machine Instances | `string` | `Manual` | No |
-| user_data | The Base64-Encoded User Data which should be used for this Virtual Machine Scale Set | `string` | `manual` | No |
+| user_data | The Base64-Encoded User Data which should be used for this Virtual Machine Scale Set | `string` | n/a | No |
 | vtpm_enabled | Specifies whether vTPM should be enabled on the virtual machine | `bool` | n/a | No |
+| timeouts | Operation timeouts for `create`, `read`, `update`, and `delete` | `object({})` | n/a | No |
 | zone_balance | Should the Virtual Machines in this Scale Set be strictly evenly distributed across Availability Zones | `bool` | `false` | No |
 | zones | Specifies a list of Availability Zones in which this Linux Virtual Machine Scale Set should be located | `list(string)` | `["1","2","3"]` | No |
 | azure_ad_groups | list of azure AD groups that will be granted the Reader role  | `list` | `[]` | No |
@@ -141,8 +145,35 @@ output "id" {
 |------|-------------|
 | name | vmss name |
 | id | vmss id |
+| unique_id | VMSS unique ID |
+| identity | Managed identity attributes, including principal and tenant IDs when configured |
 
 ## Documentation
 
 Terraform Linux Virtual Machine Scale Set: <br>
 [https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_virtual_machine_scale_set](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/linux_virtual_machine_scale_set)<br>
+
+## Release Notes
+
+### [v5.6.0] - 2026-09-24
+
+#### Added
+- Support for AzureRM provider 5.6.0 and Terraform 1.16.4.
+- Support for resilient VM creation/deletion, auxiliary network interface settings, OS disk encryption sets, and resource operation timeouts.
+- Outputs for `unique_id` and managed identity attributes.
+- Support for multiple network interfaces, IP configurations, public IP configurations, IP tags, and certificates.
+
+#### Changed
+- Renamed network interface inputs `enable_accelerated_networking` and `enable_ip_forwarding` to `accelerated_networking_enabled` and `ip_forwarding_enabled`.
+- Renamed automatic OS upgrade fields `disable_automatic_rollback` and `enable_automatic_os_upgrade` to `automatic_rollback_enabled` and `automatic_os_upgrade_enabled`.
+- Renamed data disk fields `ultra_ssd_disk_iops_read_write` and `ultra_ssd_disk_mbps_read_write` to `disk_iops_read_write` and `disk_mbps_read_write`.
+- Corrected numeric, boolean, duration, gallery application, certificate, and extension input types to match AzureRM 5.6.0.
+
+#### Fixed
+- Fixed additional network interfaces and IP configurations incorrectly reusing values from the first interface.
+- Fixed `automatic_instance_repair.action` being ignored.
+- Fixed Trusted Launch configuration by accepting `vtpm_enabled` as a boolean alongside `secure_boot_enabled`.
+- Fixed incorrect resource descriptions inherited from unrelated modules.
+
+#### Removed
+- Removed deprecated AzureRM input names `enable_accelerated_networking`, `enable_ip_forwarding`, `disable_automatic_rollback`, `enable_automatic_os_upgrade`, `ultra_ssd_disk_iops_read_write`, and `ultra_ssd_disk_mbps_read_write`.

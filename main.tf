@@ -5,81 +5,47 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss_uniform" {
   admin_username      = var.admin_username
   instances           = var.instances
   sku                 = var.sku
-  # first network interface
   network_interface {
-    name = var.network_interface[0].name
-    # first ip configuration
+    name                           = var.network_interface[0].name
+    auxiliary_mode                 = lookup(var.network_interface[0], "auxiliary_mode", null)
+    auxiliary_sku                  = lookup(var.network_interface[0], "auxiliary_sku", null)
+    dns_servers                    = lookup(var.network_interface[0], "dns_servers", null)
+    accelerated_networking_enabled = lookup(var.network_interface[0], "accelerated_networking_enabled", null)
+    ip_forwarding_enabled          = lookup(var.network_interface[0], "ip_forwarding_enabled", null)
+    network_security_group_id      = lookup(var.network_interface[0], "network_security_group_id", null)
+    primary                        = lookup(var.network_interface[0], "primary", null)
+
     ip_configuration {
       name                                         = var.network_interface[0].ip_configuration[0].name
       application_gateway_backend_address_pool_ids = lookup(var.network_interface[0].ip_configuration[0], "application_gateway_backend_address_pool_ids", null)
       application_security_group_ids               = lookup(var.network_interface[0].ip_configuration[0], "application_security_group_ids", null)
       load_balancer_backend_address_pool_ids       = lookup(var.network_interface[0].ip_configuration[0], "load_balancer_backend_address_pool_ids", null)
       load_balancer_inbound_nat_rules_ids          = lookup(var.network_interface[0].ip_configuration[0], "load_balancer_inbound_nat_rules_ids", null)
-      primary                                      = lookup(var.network_interface[0].ip_configuration[0], "primary", null)      
+      primary                                      = lookup(var.network_interface[0].ip_configuration[0], "primary", null)
+      subnet_id                                    = lookup(var.network_interface[0].ip_configuration[0], "subnet_id", null)
+      version                                      = lookup(var.network_interface[0].ip_configuration[0], "version", null)
       dynamic "public_ip_address" {
-        for_each = var.network_interface[0].ip_configuration[0].public_ip_address != null ? [var.network_interface[0].ip_configuration[0].public_ip_address] : []
+        for_each = lookup(var.network_interface[0].ip_configuration[0], "public_ip_address", null) != null ? [lookup(var.network_interface[0].ip_configuration[0], "public_ip_address", null)] : []
         content {
           name                    = public_ip_address.value.name
           domain_name_label       = lookup(public_ip_address.value, "domain_name_label", null)
           idle_timeout_in_minutes = lookup(public_ip_address.value, "idle_timeout_in_minutes", null)
+          public_ip_prefix_id     = lookup(public_ip_address.value, "public_ip_prefix_id", null)
+          version                 = lookup(public_ip_address.value, "version", null)
+
           dynamic "ip_tag" {
-            for_each = public_ip_address.value.ip_tag != null ? [public_ip_address.value.ip_tag] : []
+            for_each = lookup(public_ip_address.value, "ip_tag", [])
             content {
               tag  = ip_tag.value.tag
               type = ip_tag.value.type
             }
           }
-          public_ip_prefix_id = lookup(public_ip_address.value, "public_ip_prefix_id", null)
-          version             = lookup(public_ip_address.value, "version", null)
         }
       }
-      subnet_id = lookup(var.network_interface[0].ip_configuration[0], "subnet_id", null)
-      version   = lookup(var.network_interface[0].ip_configuration[0], "version", null)
     }
-    # optional additional ip configuration
+
     dynamic "ip_configuration" {
-      for_each = length(var.network_interface[0].ip_configuration) > 1 ? slice(var.network_interface[0].ip_configuration, 1, length(var.network_interface[0].ip_configuration)) : []
-      content {
-        name                                         = ip_configuration.value.name
-        application_gateway_backend_address_pool_ids = lookup(ip_configuration.value, "application_gateway_backend_address_pool_ids", null)
-        application_security_group_ids               = lookup(ip_configuration.value, "application_security_group_ids", null)
-        load_balancer_backend_address_pool_ids       = lookup(ip_configuration.value, "load_balancer_backend_address_pool_ids", null)
-        load_balancer_inbound_nat_rules_ids          = lookup(ip_configuration.value, "load_balancer_inbound_nat_rules_ids", null)
-        primary                                      = lookup(ip_configuration.value, "primary", null)        
-        dynamic "public_ip_address" {
-          for_each = ip_configuration.value.public_ip_address != null ? [ip_configuration.value.public_ip_address] : []
-          content {
-            name                    = public_ip_address.value.name
-            domain_name_label       = lookup(public_ip_address.value, "domain_name_label", null)
-            idle_timeout_in_minutes = lookup(public_ip_address.value, "idle_timeout_in_minutes", null)
-            dynamic "ip_tag" {
-              for_each = public_ip_address.value.ip_tag != null ? [public_ip_address.value.ip_tag] : []
-              content {
-                tag  = ip_tag.value.tag
-                type = ip_tag.value.type
-              }
-            }
-            public_ip_prefix_id = lookup(public_ip_address.value, "public_ip_prefix_id", null)
-            version             = lookup(public_ip_address.value, "version", null)
-          }
-        }
-        subnet_id = lookup(var.network_interface[0].ip_configuration[0], "subnet_id", null)
-        version   = lookup(var.network_interface[0].ip_configuration[0], "version", null)
-      }
-    }
-    dns_servers                   = lookup(var.network_interface[0], "dns_servers", null)
-    enable_accelerated_networking = lookup(var.network_interface[0], "enable_accelerated_networking", null)
-    enable_ip_forwarding          = lookup(var.network_interface[0], "enable_ip_forwarding", null)
-    network_security_group_id     = lookup(var.network_interface[0], "network_security_group_id", null)
-    primary                       = lookup(var.network_interface[0], "primary", null)
-  }
-  # optional additional network interface
-  dynamic "network_interface" {
-    for_each = length(var.network_interface) > 1 ? slice(var.network_interface, 1, length(var.network_interface)) : []
-    content {
-    name = network_interface.value.name    
-    dynamic "ip_configuration" {
-      for_each = length(var.network_interface) > 1 ? [] : network_interface.ip_configuration
+      for_each = slice(var.network_interface[0].ip_configuration, 1, length(var.network_interface[0].ip_configuration))
       content {
         name                                         = ip_configuration.value.name
         application_gateway_backend_address_pool_ids = lookup(ip_configuration.value, "application_gateway_backend_address_pool_ids", null)
@@ -87,45 +53,89 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss_uniform" {
         load_balancer_backend_address_pool_ids       = lookup(ip_configuration.value, "load_balancer_backend_address_pool_ids", null)
         load_balancer_inbound_nat_rules_ids          = lookup(ip_configuration.value, "load_balancer_inbound_nat_rules_ids", null)
         primary                                      = lookup(ip_configuration.value, "primary", null)
+        subnet_id                                    = lookup(ip_configuration.value, "subnet_id", null)
+        version                                      = lookup(ip_configuration.value, "version", null)
+
         dynamic "public_ip_address" {
-          for_each = ip_configuration.value.public_ip_address != null ? [ip_configuration.value.public_ip_address] : []
+          for_each = lookup(ip_configuration.value, "public_ip_address", null) != null ? [lookup(ip_configuration.value, "public_ip_address", null)] : []
           content {
             name                    = public_ip_address.value.name
             domain_name_label       = lookup(public_ip_address.value, "domain_name_label", null)
             idle_timeout_in_minutes = lookup(public_ip_address.value, "idle_timeout_in_minutes", null)
+            public_ip_prefix_id     = lookup(public_ip_address.value, "public_ip_prefix_id", null)
+            version                 = lookup(public_ip_address.value, "version", null)
+
             dynamic "ip_tag" {
-              for_each = public_ip_address.value.ip_tag != null ? [public_ip_address.value.ip_tag] : []
+              for_each = lookup(public_ip_address.value, "ip_tag", [])
               content {
                 tag  = ip_tag.value.tag
                 type = ip_tag.value.type
               }
             }
-            public_ip_prefix_id = lookup(public_ip_address.value, "public_ip_prefix_id", null)
-            version             = lookup(public_ip_address.value, "version", null)
           }
         }
-        subnet_id = lookup(var.network_interface[0].ip_configuration[0], "subnet_id", null)
-        version   = lookup(var.network_interface[0].ip_configuration[0], "version", null)
       }
     }
-    dns_servers                   = lookup(var.network_interface[0], "dns_servers", null)
-    enable_accelerated_networking = lookup(var.network_interface[0], "enable_accelerated_networking", null)
-    enable_ip_forwarding          = lookup(var.network_interface[0], "enable_ip_forwarding", null)
-    network_security_group_id     = lookup(var.network_interface[0], "network_security_group_id", null)
-    primary                       = lookup(var.network_interface[0], "primary", null)
+  }
+
+  dynamic "network_interface" {
+    for_each = slice(var.network_interface, 1, length(var.network_interface))
+    content {
+      name                           = network_interface.value.name
+      auxiliary_mode                 = lookup(network_interface.value, "auxiliary_mode", null)
+      auxiliary_sku                  = lookup(network_interface.value, "auxiliary_sku", null)
+      dns_servers                    = lookup(network_interface.value, "dns_servers", null)
+      accelerated_networking_enabled = lookup(network_interface.value, "accelerated_networking_enabled", null)
+      ip_forwarding_enabled          = lookup(network_interface.value, "ip_forwarding_enabled", null)
+      network_security_group_id      = lookup(network_interface.value, "network_security_group_id", null)
+      primary                        = lookup(network_interface.value, "primary", null)
+
+      dynamic "ip_configuration" {
+        for_each = network_interface.value.ip_configuration
+        content {
+          name                                         = ip_configuration.value.name
+          application_gateway_backend_address_pool_ids = lookup(ip_configuration.value, "application_gateway_backend_address_pool_ids", null)
+          application_security_group_ids               = lookup(ip_configuration.value, "application_security_group_ids", null)
+          load_balancer_backend_address_pool_ids       = lookup(ip_configuration.value, "load_balancer_backend_address_pool_ids", null)
+          load_balancer_inbound_nat_rules_ids          = lookup(ip_configuration.value, "load_balancer_inbound_nat_rules_ids", null)
+          primary                                      = lookup(ip_configuration.value, "primary", null)
+          subnet_id                                    = lookup(ip_configuration.value, "subnet_id", null)
+          version                                      = lookup(ip_configuration.value, "version", null)
+
+          dynamic "public_ip_address" {
+            for_each = lookup(ip_configuration.value, "public_ip_address", null) != null ? [lookup(ip_configuration.value, "public_ip_address", null)] : []
+            content {
+              name                    = public_ip_address.value.name
+              domain_name_label       = lookup(public_ip_address.value, "domain_name_label", null)
+              idle_timeout_in_minutes = lookup(public_ip_address.value, "idle_timeout_in_minutes", null)
+              public_ip_prefix_id     = lookup(public_ip_address.value, "public_ip_prefix_id", null)
+              version                 = lookup(public_ip_address.value, "version", null)
+
+              dynamic "ip_tag" {
+                for_each = lookup(public_ip_address.value, "ip_tag", [])
+                content {
+                  tag  = ip_tag.value.tag
+                  type = ip_tag.value.type
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
   os_disk {
     caching              = var.os_disk.caching
     storage_account_type = var.os_disk.storage_account_type
     dynamic "diff_disk_settings" {
-      for_each = var.os_disk.diff_disk_settings != null ? [var.os_disk.diff_disk_settings] : []
+      for_each = lookup(var.os_disk, "diff_disk_settings", null) != null ? [lookup(var.os_disk, "diff_disk_settings", null)] : []
       content {
         option    = diff_disk_settings.value.option
         placement = lookup(diff_disk_settings.value, "placement", null)
       }
     }
     disk_size_gb                     = lookup(var.os_disk, "disk_size_gb", null)
+    disk_encryption_set_id           = lookup(var.os_disk, "disk_encryption_set_id", null)
     secure_vm_disk_encryption_set_id = lookup(var.os_disk, "secure_vm_disk_encryption_set_id", null)
     security_encryption_type         = lookup(var.os_disk, "security_encryption_type", null)
     write_accelerator_enabled        = lookup(var.os_disk, "write_accelerator_enabled", null)
@@ -133,7 +143,7 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss_uniform" {
   dynamic "additional_capabilities" {
     for_each = var.additional_capabilities != null ? [var.additional_capabilities] : []
     content {
-      ultra_ssd_enabled = additional_capabilities.value.ultra_ssd_enabled
+      ultra_ssd_enabled = lookup(additional_capabilities.value, "ultra_ssd_enabled", null)
     }
   }
   admin_password = var.admin_password
@@ -147,8 +157,8 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss_uniform" {
   dynamic "automatic_os_upgrade_policy" {
     for_each = var.automatic_os_upgrade_policy != null ? [var.automatic_os_upgrade_policy] : []
     content {
-      disable_automatic_rollback  = automatic_os_upgrade_policy.value.disable_automatic_rollback
-      enable_automatic_os_upgrade = automatic_os_upgrade_policy.value.enable_automatic_os_upgrade
+      automatic_rollback_enabled   = automatic_os_upgrade_policy.value.automatic_rollback_enabled
+      automatic_os_upgrade_enabled = automatic_os_upgrade_policy.value.automatic_os_upgrade_enabled
     }
   }
   dynamic "automatic_instance_repair" {
@@ -156,7 +166,7 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss_uniform" {
     content {
       enabled      = automatic_instance_repair.value.enabled
       grace_period = lookup(automatic_instance_repair.value, "grace_period", null)
-      #action = lookup(automatic_instance_repair.value, "action", null)    
+      action       = lookup(automatic_instance_repair.value, "action", null)
     }
   }
   dynamic "boot_diagnostics" {
@@ -171,16 +181,16 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss_uniform" {
   dynamic "data_disk" {
     for_each = var.data_disk != null ? var.data_disk : []
     content {
-      name                           = lookup(data_disk.value, "name", null)
-      caching                        = data_disk.value.caching
-      create_option                  = lookup(data_disk.value, "create_option", null)
-      disk_size_gb                   = lookup(data_disk.value, "disk_size_gb", null)
-      lun                            = data_disk.value.lun
-      storage_account_type           = lookup(data_disk.value, "storage_account_type", null)
-      disk_encryption_set_id         = lookup(data_disk.value, "disk_encryption_set_id", null)
-      ultra_ssd_disk_iops_read_write = lookup(data_disk.value, "ultra_ssd_disk_iops_read_write", null)
-      ultra_ssd_disk_mbps_read_write = lookup(data_disk.value, "ultra_ssd_disk_mbps_read_write", null)
-      write_accelerator_enabled      = lookup(data_disk.value, "write_accelerator_enabled", null)
+      name                      = lookup(data_disk.value, "name", null)
+      caching                   = data_disk.value.caching
+      create_option             = lookup(data_disk.value, "create_option", null)
+      disk_size_gb              = data_disk.value.disk_size_gb
+      lun                       = data_disk.value.lun
+      storage_account_type      = data_disk.value.storage_account_type
+      disk_encryption_set_id    = lookup(data_disk.value, "disk_encryption_set_id", null)
+      disk_iops_read_write      = lookup(data_disk.value, "disk_iops_read_write", null)
+      disk_mbps_read_write      = lookup(data_disk.value, "disk_mbps_read_write", null)
+      write_accelerator_enabled = lookup(data_disk.value, "write_accelerator_enabled", null)
     }
   }
   disable_password_authentication                   = var.disable_password_authentication
@@ -193,13 +203,13 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss_uniform" {
       name                       = extension.value.name
       publisher                  = extension.value.publisher
       type                       = extension.value.type
-      type_handler_version       = lookup(extension.value, "type_handler_version", null)
+      type_handler_version       = extension.value.type_handler_version
       auto_upgrade_minor_version = lookup(extension.value, "auto_upgrade_minor_version", null)
       automatic_upgrade_enabled  = lookup(extension.value, "automatic_upgrade_enabled", null)
       force_update_tag           = lookup(extension.value, "force_update_tag", null)
       protected_settings         = lookup(extension.value, "protected_settings", null)
       dynamic "protected_settings_from_key_vault" {
-        for_each = extension.value.protected_settings_from_key_vault != null ? [extension.value.protected_settings_from_key_vault] : []
+        for_each = lookup(extension.value, "protected_settings_from_key_vault", null) != null ? [lookup(extension.value, "protected_settings_from_key_vault", null)] : []
         content {
           secret_url      = protected_settings_from_key_vault.value.secret_url
           source_vault_id = protected_settings_from_key_vault.value.source_vault_id
@@ -227,7 +237,7 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss_uniform" {
     for_each = var.identity != null ? [var.identity] : []
     content {
       type         = identity.value.type
-      identity_ids = identity.value.identity_ids
+      identity_ids = lookup(identity.value, "identity_ids", null)
     }
   }
   max_bid_price = var.max_bid_price
@@ -240,10 +250,12 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss_uniform" {
       product   = plan.value.product
     }
   }
-  platform_fault_domain_count  = var.platform_fault_domain_count
-  priority                     = var.priority
-  provision_vm_agent           = var.provision_vm_agent
-  proximity_placement_group_id = var.proximity_placement_group_id
+  platform_fault_domain_count   = var.platform_fault_domain_count
+  priority                      = var.priority
+  provision_vm_agent            = var.provision_vm_agent
+  proximity_placement_group_id  = var.proximity_placement_group_id
+  resilient_vm_creation_enabled = var.resilient_vm_creation_enabled
+  resilient_vm_deletion_enabled = var.resilient_vm_deletion_enabled
   dynamic "rolling_upgrade_policy" {
     for_each = var.rolling_upgrade_policy != null ? [var.rolling_upgrade_policy] : []
     content {
@@ -268,7 +280,7 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss_uniform" {
     for_each = var.secret != null ? var.secret : []
     content {
       dynamic "certificate" {
-        for_each = secret.value.certificate != null ? [secret.value.certificate] : []
+        for_each = secret.value.certificate
         content {
           url = certificate.value.url
         }
@@ -299,7 +311,7 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss_uniform" {
   dynamic "termination_notification" {
     for_each = var.termination_notification != null ? [var.termination_notification] : []
     content {
-      enabled = lookup(termination_notification.value, "enabled", null)
+      enabled = termination_notification.value.enabled
       timeout = lookup(termination_notification.value, "timeout", null)
     }
   }
@@ -307,6 +319,17 @@ resource "azurerm_linux_virtual_machine_scale_set" "vmss_uniform" {
   user_data    = var.user_data
   vtpm_enabled = var.vtpm_enabled
   zone_balance = var.zone_balance
+  zones        = var.zones
+
+  dynamic "timeouts" {
+    for_each = var.timeouts != null ? [var.timeouts] : []
+    content {
+      create = lookup(timeouts.value, "create", null)
+      read   = lookup(timeouts.value, "read", null)
+      update = lookup(timeouts.value, "update", null)
+      delete = lookup(timeouts.value, "delete", null)
+    }
+  }
   lifecycle {
     ignore_changes = [
       tags["create_date"]
@@ -321,7 +344,7 @@ resource "azurerm_role_assignment" "vmss_uniform_reader" {
   for_each = {
     for group in var.azure_ad_groups : group => group
   }
-  scope                = azurerm_linux_virtual_machine_scale_set.vmss_uniform
+  scope                = azurerm_linux_virtual_machine_scale_set.vmss_uniform.id
   role_definition_name = "Reader"
   principal_id         = each.value
 }
